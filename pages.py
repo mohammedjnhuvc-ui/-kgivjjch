@@ -873,7 +873,7 @@ body{background:radial-gradient(900px 500px at 75% -10%,rgba(124,92,255,.10),tra
           <span id="ibUpdatedAt" style="font-size:9px;color:var(--sub2);align-self:center;white-space:nowrap">—</span>
           <button class="btn" id="ibRefreshBtn" onclick="refreshAllInbounds()"><i class="ti ti-refresh" id="ibRefreshIcon"></i>بروزرسانی همه</button>
           <button class="btn" onclick="openAutoLink()"><i class="ti ti-bolt"></i>ساخت سریع</button>
-          <button class="btn primary btn-inbound" onclick="openLinkDrawer()"><i class="ti ti-plus"></i>اینباند جدید</button>
+          <button class="btn primary btn-inbound" onclick="openLinkDrawer()"><i class="ti ti-plus"></i>اینباند جدید</button><button class="btn" onclick="exportLinksBackup()" title="پشتیبان‌گیری JSON"><i class="ti ti-download"></i>پشتیبان</button><button class="btn" onclick="importLinksBackup()" title="بازیابی JSON"><i class="ti ti-upload"></i>بازیابی</button><button class="btn" onclick="openQrGallery()" title="گالری QR"><i class="ti ti-qrcode"></i>QRها</button>
         </div>
       </div>
       <div class="ib-quickstats" id="ibQuickStats"></div>
@@ -886,7 +886,7 @@ body{background:radial-gradient(900px 500px at 75% -10%,rgba(124,92,255,.10),tra
         <div class="ib-bulkactions">
           <button class="btn sm" onclick="bulkToggleLinks(true)"><i class="ti ti-power"></i>فعال‌سازی</button>
           <button class="btn sm" onclick="bulkToggleLinks(false)"><i class="ti ti-power"></i>غیرفعال‌سازی</button>
-          <button class="btn sm" style="color:var(--bad)" onclick="bulkDeleteLinks()"><i class="ti ti-trash"></i>حذف</button>
+          <button class="btn sm" style="color:var(--bad)" onclick="bulkDeleteLinks()"><i class="ti ti-trash"></i>حذف</button><button class="btn sm" onclick="bulkExtendLinks()"><i class="ti ti-calendar-plus"></i>تمدید گروهی</button><button class="btn sm" onclick="bulkLimitLinks()"><i class="ti ti-database"></i>حجم گروهی</button>
         </div>
       </div>
       <div class="ib-grid" id="ibGrid"></div>
@@ -1720,6 +1720,11 @@ async function bulkDeleteLinks(){
   try{ await Promise.all(sel.map(uid=>api(`/api/links/${uid}`, {method:'DELETE'}))); toast('حذف گروهی انجام شد'); loadLinks(); }
   catch(e){ toast(e.message, false); }
 }
+function exportLinksBackup(){const payload={version:1,exported_at:new Date().toISOString(),links:LINKS.filter(x=>!x.is_client)};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='vodiwalker-links-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href);toast('پشتیبان JSON دانلود شد ✓')}
+function importLinksBackup(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());const rows=Array.isArray(data)?data:(data.links||[]);if(!rows.length)throw Error('فایل کانفیگ ندارد');if(!confirm(`تعداد ${rows.length} کانفیگ از فایل ساخته شود؟`))return;let ok=0;for(const x of rows){const body={label:x.label||x.name||'Imported Config',address:x.address||x.host,port:x.port||443,uuid:x.uuid,protocol:x.protocol||'vless',network:x.network||'tcp',security:x.security||'none',path:x.path||'/',host_header:x.host_header||'',sni:x.sni||'',expires_at:x.expires_at||'',limit_value:x.limit_bytes?Number(x.limit_bytes)/1073741824:0,limit_unit:'GB',category_id:x.category_id||'0'};if(!body.address||!body.uuid)continue;await api('/api/links',{method:'POST',body:JSON.stringify(body)});ok++}toast(`${ok} کانفیگ بازیابی شد ✓`);loadLinks()}catch(e){toast('بازیابی ناموفق: '+e.message,false)}};input.click()}
+async function bulkExtendLinks(){const ids=selectedLinkUuids();if(!ids.length)return;const days=prompt('چند روز به انقضای انتخاب‌شده اضافه شود؟','30');if(days===null)return;const n=Number(days);if(!Number.isFinite(n)||n<=0)return toast('تعداد روز معتبر نیست',false);try{await Promise.all(ids.map(uid=>api(`/api/links/${uid}`,{method:'PATCH',body:JSON.stringify({expires_days:n})})));toast('انقضای گروهی بروزرسانی شد ✓');loadLinks()}catch(e){toast(e.message,false)}}
+async function bulkLimitLinks(){const ids=selectedLinkUuids();if(!ids.length)return;const value=prompt('حجم هر کانفیگ (GB)؟','50');if(value===null)return;const n=Number(value);if(!Number.isFinite(n)||n<0)return toast('حجم معتبر نیست',false);try{await Promise.all(ids.map(uid=>api(`/api/links/${uid}`,{method:'PATCH',body:JSON.stringify({limit_value:n,limit_unit:'GB'})})));toast('حجم گروهی بروزرسانی شد ✓');loadLinks()}catch(e){toast(e.message,false)}}
+function openQrGallery(){const rows=LINKS.filter(x=>!x.is_client&&!x.expired);if(!rows.length)return toast('کانفیگ فعالی وجود ندارد',false);const cards=rows.map(l=>{const url=l.sub_url||l.info_url||location.origin+'/sub/'+l.uuid;const qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);return `<div class="card" style="padding:14px;text-align:center"><b>${escapeHtml(l.label||'Config')}</b><img src="${qr}" alt="QR" style="display:block;width:180px;height:180px;margin:12px auto;border-radius:10px;background:#fff"><button class="btn" onclick="copyText(${JSON.stringify(url)})"><i class="ti ti-copy"></i>کپی لینک</button></div>`}).join('');openDrawer('گالری QR کانفیگ‌ها',`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px">${cards}</div>`,'<button class="btn" style="width:100%" onclick="closeDrawer()">بستن</button>')}
 async function openClients(uid){
   const inbound=LINKS.find(x=>x.uuid===uid); if(!inbound) return;
   try{
