@@ -1672,7 +1672,7 @@ function ibCardHtml(l){
     <div class="ib-card-foot">
       <div class="ib-clientcell"><button class="iconbtn" title="مدیریت کلاینت‌ها" onclick="openClients('${l.uuid}')"><i class="ti ti-users"></i></button><span>مدیریت کلاینت</span></div>
       <div class="ib-card-actions">
-        <button class="iconbtn" title="اشتراک" onclick="showSubLink('${l.uuid}')"><i class="ti ti-qrcode"></i></button>
+        <button class="iconbtn" title="اشتراک" onclick="showSubLink('${l.uuid}')"><i class="ti ti-qrcode"></i></button><button class="iconbtn" title="لینک وضعیت مصرف و انقضا" onclick="window.open('${l.info_url||('/info/'+l.uuid)}','_blank')"><i class="ti ti-chart-donut"></i></button>
         <button class="iconbtn" title="ویرایش" onclick="openLinkDrawer('${l.uuid}')"><i class="ti ti-pencil"></i></button>
         <button class="iconbtn" title="تعویض لینک (UUID جدید)" onclick="regenerateLink('${l.uuid}')"><i class="ti ti-replace"></i></button>
         <button class="iconbtn" title="ریست حجم مصرفی" onclick="resetLinkUsage('${l.uuid}')"><i class="ti ti-refresh"></i></button>
@@ -1863,8 +1863,9 @@ function showSubLink(uid){
     <div class="qr-box"><img src="${qr}"></div>
     <div class="grp"><label>لینک ساب</label><div class="copy-row"><input readonly value="${escapeHtml(l.sub_url||l.sub)}" id="subLinkInp"></div></div>
     <div class="grp"><label>صفحه‌ی نمایش اشتراک (برای مشتری)</label><div class="copy-row"><input readonly value="${escapeHtml((l.sub_url||l.sub||'').replace('/sub/','/subscription/'))}" id="subPortalInp"></div></div>
-    <p class="hint">اگر این لینک برای مشتری باز نمی‌شود، ابتدا از تب «تنظیمات» آدرس عمومی پنل را درست تنظیم کنید.</p>
-  `, `<button class="btn primary" style="width:100%" onclick="copyInput('subLinkInp')"><i class="ti ti-copy"></i>کپی لینک ساب</button>`);
+    <div class="grp"><label>لینک وضعیت اختصاصی کانفیگ</label><div class="copy-row"><input readonly value="${escapeHtml(l.info_url||((location.origin||'')+'/info/'+l.uuid))}" id="linkInfoInp"></div></div>
+    <p class="hint">این لینک مصرف، حجم باقی‌مانده، تاریخ انقضا، وضعیت فعال‌بودن، محدودیت اتصال و QR همین کانفیگ را نشان می‌دهد.</p>
+  `, `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn primary" onclick="copyInput('subLinkInp')"><i class="ti ti-copy"></i>کپی ساب</button><button class="btn" onclick="copyInput('linkInfoInp')"><i class="ti ti-chart-donut"></i>کپی لینک وضعیت</button></div>`);
 }
 function legacyCopy(text){
   // execCommand روی همه‌ی مرورگرها حتی بدون HTTPS (secure context) کار می‌کند.
